@@ -1,17 +1,16 @@
 import streamlit as st
 from groq import Groq
 
-st.set_page_config(page_title="AI Content Assistant", page_icon="✍️")
+# Page Setup
+st.set_page_config(page_title="AI Content Assistant", page_icon="✍️", layout="centered")
 
 st.title("✍️ AI Content Assistant")
-st.write("Create social media content using Groq AI.")
+st.write("Generate tailored social media posts, captions, and hashtags instantly.")
 
-# Load API key from Streamlit secrets
-try:
-    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-except Exception:
-    GROQ_API_KEY = None
+# Retrieve Groq API Key from Streamlit Secrets
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", None)
 
+# User Inputs
 content_type = st.selectbox(
     "Content Type",
     ["Social Media Post", "Product Promotion", "Educational Post", "Announcement", "Blog Idea"]
@@ -24,12 +23,12 @@ platform = st.selectbox(
 
 topic = st.text_area(
     "Topic",
-    placeholder="Example: Benefits of learning Python for beginners"
+    placeholder="e.g., Benefits of learning Python for beginners"
 )
 
 target_audience = st.text_input(
     "Target Audience",
-    placeholder="Example: Students and beginner developers"
+    placeholder="e.g., Students and beginner developers"
 )
 
 tone = st.selectbox(
@@ -37,52 +36,43 @@ tone = st.selectbox(
     ["Professional", "Friendly", "Casual", "Funny", "Inspirational", "Educational"]
 )
 
+# Execution
 if st.button("Generate Content", type="primary"):
     if not GROQ_API_KEY:
-        st.error("Groq API key not found. Add GROQ_API_KEY to Streamlit secrets.")
+        st.error("🔑 Groq API Key is missing. Add `GROQ_API_KEY` to your Streamlit secrets.")
     elif not topic.strip() or not target_audience.strip():
-        st.warning("Please enter both the topic and target audience.")
+        st.warning("⚠️ Please fill in both the Topic and Target Audience fields.")
     else:
         client = Groq(api_key=GROQ_API_KEY)
 
         prompt = f"""
-You are an expert social media content writer.
+You are an expert social media copywriter. Generate content based on these exact specifications:
 
-Create content using these details:
+- Content Type: {content_type}
+- Platform: {platform}
+- Topic: {topic}
+- Target Audience: {target_audience}
+- Tone: {tone}
 
-Content Type: {content_type}
-Platform: {platform}
-Topic: {topic}
-Target Audience: {target_audience}
-Tone: {tone}
+Strictly follow this structure in your response:
 
-Return the response in exactly this format:
+**POST:**
+[Write a complete, engaging post tailored for {platform}]
 
-POST:
-Write a complete, engaging post suitable for the selected platform.
+**CAPTION:**
+[Write a concise, punchy caption]
 
-CAPTION:
-Write a short, attractive caption.
-
-HASHTAGS:
-Provide 8 to 12 relevant hashtags.
-
-Keep the content practical, natural, engaging, and appropriate for the target audience.
+**HASHTAGS:**
+[Provide 8 to 12 relevant hashtags separated by spaces]
 """
 
         try:
-            with st.spinner("Generating your content..."):
+            with st.spinner("Generating content..."):
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a helpful AI content creation assistant."
-                        },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
+                        {"role": "system", "content": "You are a professional AI social media content strategist."},
+                        {"role": "user", "content": prompt}
                     ],
                     temperature=0.7,
                     max_tokens=1000,
@@ -90,19 +80,20 @@ Keep the content practical, natural, engaging, and appropriate for the target au
 
             generated_content = response.choices[0].message.content
 
-            st.success("Content generated successfully!")
-            st.subheader("Generated Content")
+            st.success("✅ Content Generated!")
+            st.markdown("---")
             st.markdown(generated_content)
+            st.markdown("---")
 
             st.download_button(
-                label="Download Content",
+                label="📥 Download Content (.txt)",
                 data=generated_content,
-                file_name="ai_generated_content.txt",
+                file_name=f"{platform.lower()}_content.txt",
                 mime="text/plain"
             )
 
-        except Exception as error:
-            st.error(f"Something went wrong: {error}")
+        except Exception as err:
+            st.error(f"Error executing request: {err}")
 
 st.divider()
-st.caption("Built with Streamlit and Groq AI")
+st.caption("Powered by Streamlit & Groq API")
